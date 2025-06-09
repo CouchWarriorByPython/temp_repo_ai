@@ -1,9 +1,10 @@
 import json
 import logging
+import os
 from typing import Dict, Any
 
 import functions_framework
-from flask import jsonify
+from flask import jsonify, Request
 
 # Імпортуємо функції пошуку з окремого модуля
 from search_functions import search_vertex_ai
@@ -21,7 +22,7 @@ def create_chat_response(message: str) -> Dict[str, Any]:
 
 
 @functions_framework.http
-def chat_vertex_bot(request):
+def chat_vertex_bot(request: Request):
     """HTTP Cloud Function для обробки Google Chat webhooks."""
 
     # Перевірка методу запиту
@@ -101,7 +102,29 @@ def chat_vertex_bot(request):
             logger.info(f"Пошуковий запит: {message_text}")
 
             # Виконання пошуку
-            search_result = search_vertex_ai(message_text)
+            try:
+                search_result = search_vertex_ai(message_text)
+
+                # Перевіряємо довжину відповіді (Google Chat має ліміти)
+                if len(search_result) > 4000:
+                    # Скорочуємо відповідь якщо вона занадто довга
+                    search_result = search_result[:3900] + "\n\n⚠️ *Відповідь була скорочена через обмеження розміру.*"
+
+                logger.info(f"Успішно знайдено результати для запиту: {message_text}")
+
+            except Exception as search_error:
+                logger.error(f"Помилка пошуку: {str(search_error)}")
+
+                search_result = f"""⚠️ **Помилка пошуку**
+
+Вибачте, сталася помилка під час пошуку: {str(search_error)}
+
+**Що можна зробити:**
+• Спробуйте ще раз через кілька секунд
+• Перефразуйте запит
+• Зверніться до адміністратора
+
+Код помилки збережено в логах."""
 
             # Повертаємо результат
             response = create_chat_response(search_result)
