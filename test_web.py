@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Простий веб-тестер для Vertex AI Search
 """
@@ -8,10 +7,9 @@ import time
 from flask import Flask, request, render_template_string
 from markupsafe import Markup
 
-# Встановлюємо credentials
 os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
 
-from search_functions import search_vertex_ai, search_vertex_ai_structured
+from search_functions import search_vertex_ai_structured
 
 
 def _format_web_results(search_data):

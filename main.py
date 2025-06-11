@@ -1,12 +1,10 @@
 import json
 import logging
-import os
 from typing import Dict, Any, List
 
 import functions_framework
 from flask import jsonify, Request
 
-# Імпортуємо функції пошуку з окремого модуля
 from search_functions import search_vertex_ai_structured
 
 # Налаштування логування
