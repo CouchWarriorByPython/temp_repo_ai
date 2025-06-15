@@ -1,19 +1,26 @@
 import json
-import logging
 from typing import Dict, Any, List
 
 import functions_framework
 from flask import jsonify, Request
 
+from config import config
+from logger import get_logger
 from search_functions import search_vertex_ai_structured
 
-# Налаштування логування
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Отримуємо логер для модуля
+logger = get_logger(__name__)
 
-# ВЕРСІЯ КОДУ ДЛЯ КОНТРОЛЮ ДЕПЛОЮ
-CODE_VERSION = "v1.4.1-fix-summary-lines"
-logger.info(f"🚀 Запуск Chat Bot версії: {CODE_VERSION}")
+try:
+    config.validate()
+    logger.info("✅ Конфігурація валідна")
+except Exception as e:
+    logger.error(f"❌ Помилка конфігурації: {e}")
+    raise
+
+logger.info(f"🚀 Запуск Chat Bot версії: {config.CODE_VERSION}")
+logger.info(f"🌍 Регіон: {config.LOCATION}")
+logger.info(f"🔍 Search Engine ID: {config.SEARCH_ENGINE_ID}")
 
 
 def create_chat_response(message: str) -> Dict[str, Any]:
@@ -183,11 +190,9 @@ def create_cards_response(query: str, summary: str, results: List[Dict]) -> Dict
 def chat_vertex_bot(request: Request):
     """HTTP Cloud Function для обробки Google Chat webhooks."""
 
-    # ДОДАНО: Debug endpoint для тестування
     if request.method == 'GET' and 'debug' in request.args:
         debug_query = request.args.get('q', 'імпорт прайсів')
 
-        # Симулюємо очистку згадки як в реальному Chat
         original_query = debug_query
         if debug_query.startswith('@Vertex AI Search Bot'):
             debug_query = debug_query.replace('@Vertex AI Search Bot', '').strip()
@@ -196,7 +201,7 @@ def chat_vertex_bot(request: Request):
             search_data = search_vertex_ai_structured(debug_query)
             return jsonify({
                 "debug": True,
-                "version": CODE_VERSION,
+                "version": config.CODE_VERSION,
                 "prompt_type": "original_user_prompt",
                 "original_query": original_query,
                 "cleaned_query": debug_query,
@@ -206,7 +211,7 @@ def chat_vertex_bot(request: Request):
                 "results": [{"title": r['title'], "has_snippet": bool(r['snippet'])} for r in search_data['results']]
             })
         except Exception as e:
-            return jsonify({"debug_error": str(e), "version": CODE_VERSION}), 500
+            return jsonify({"debug_error": str(e), "version": config.CODE_VERSION}), 500
 
     # Перевірка методу запиту
     if request.method != 'POST':

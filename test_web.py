@@ -2,15 +2,14 @@
 Простий веб-тестер для Vertex AI Search
 """
 
-import os
 import time
 from flask import Flask, request, render_template_string
 from markupsafe import Markup
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "credentials.json"
-
+# Використовуємо нову архітектуру
+from config import config
+from logger import logger
 from search_functions import search_vertex_ai_structured
-
 
 def _format_web_results(search_data):
     """Форматує структуровані дані для веб-клієнта як красиві картки."""
@@ -521,7 +520,7 @@ def index():
 
     if query:
         try:
-            print(f"🔍 Тестую запит: {query}")
+            logger.info(f"🔍 Тестую запит: {query}")
 
             # Замір часу виконання
             start_time = time.time()
@@ -547,12 +546,12 @@ def index():
                 'raw_info': f"Знайдено {search_data['total_results']} результатів. Summary: {'Так' if search_data['summary'] else 'Ні'}"
             }
 
-            print(f"✅ Успішно виконано за {execution_time}с")
+            logger.info(f"✅ Успішно виконано за {execution_time}с")
 
         except Exception as e:
-            result = f"❌ Помилка: {str(e)}<br><br>Перевірте:<br>• credentials.json існує<br>• Права доступу до Vertex AI<br>• Інтернет з'єднання"
+            result = f"❌ Помилка: {str(e)}<br><br>Перевірте:<br>• Файл .env налаштовано<br>• Credentials налаштовані<br>• Права доступу до Vertex AI<br>• Інтернет з'єднання"
             error = True
-            print(f"❌ Помилка: {e}")
+            logger.error(f"❌ Помилка: {e}")
 
             # Для помилок також використовуємо Markup
             result = Markup(result)
@@ -573,14 +572,20 @@ def health():
 
 
 if __name__ == '__main__':
-    # Перевіряємо credentials
-    if not os.path.exists("credentials.json"):
-        print("❌ Файл credentials.json не знайдено!")
-        print("Завантажте service account key з GCP Console")
+    try:
+        # Перевіряємо конфігурацію
+        logger.info("🚀 Запуск веб-тестера...")
+        logger.info(f"📋 Середовище: {config.ENVIRONMENT}")
+        logger.info(f"🌍 Проект: {config.PROJECT_ID}")
+        logger.info(f"📍 Локація: {config.LOCATION}")
+        logger.info(f"🔍 Search Engine: {config.SEARCH_ENGINE_ID}")
+        
+        logger.info("📍 Відкрийте браузер: http://localhost:8080")
+        logger.info("💡 Для зупинки натисніть Ctrl+C")
+
+        app.run(host='0.0.0.0', port=8080, debug=True)
+        
+    except Exception as e:
+        logger.error(f"❌ Помилка при запуску: {e}")
+        logger.error("💡 Перевірте файл .env та credentials")
         exit(1)
-
-    print("🚀 Запуск веб-тестера...")
-    print("📍 Відкрийте браузер: http://localhost:8080")
-    print("💡 Для зупинки натисніть Ctrl+C")
-
-    app.run(host='0.0.0.0', port=8080, debug=True)
